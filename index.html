@@ -552,7 +552,9 @@
             <input type="hidden" id="expenseType" value="">
             <input type="hidden" id="expenseId" value="">
 
+            <!-- Common Fields (always visible) -->
             <div class="form-section">
+                <h3>Basic Information</h3>
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="date">Date *</label>
@@ -562,6 +564,24 @@
                         <label for="cost">Cost *</label>
                         <input type="number" id="cost" step="0.01" placeholder="0.00" required>
                     </div>
+                    <div class="form-group">
+                        <label for="paymentMethod">Payment Method *</label>
+                        <select id="paymentMethod" required>
+                            <option value="">Select payment method...</option>
+                            <option value="DFCU debit card">DFCU debit card</option>
+                            <option value="AA cc">AA cc</option>
+                            <option value="BARCLAYS cc">BARCLAYS cc</option>
+                            <option value="Cash">Cash</option>
+                            <option value="WF business debit">WF business debit</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Personal Expense Fields (hidden by default) -->
+            <div id="personalFields" class="form-section" style="display: none;">
+                <h3>Personal Expense Details</h3>
+                <div class="form-grid">
                     <div class="form-group">
                         <label for="item">Item *</label>
                         <input type="text" id="item" list="itemList" placeholder="What did you buy?">
@@ -578,17 +598,37 @@
                             <option value="">Select category...</option>
                         </select>
                     </div>
+                </div>
+            </div>
+
+            <!-- Business Expense Fields (hidden by default) -->
+            <div id="businessFields" class="form-section" style="display: none;">
+                <h3>Business Expense Details</h3>
+                <div class="form-grid">
                     <div class="form-group">
-                        <label for="paymentMethod">Payment Method *</label>
-                        <select id="paymentMethod" required>
-                            <option value="">Select payment method...</option>
-                            <option value="DFCU debit card">DFCU debit card</option>
-                            <option value="AA cc">AA cc</option>
-                            <option value="BARCLAYS cc">BARCLAYS cc</option>
-                            <option value="Cash">Cash</option>
-                            <option value="WF business debit">WF business debit</option>
+                        <label for="categoryBusiness">Category *</label>
+                        <select id="categoryBusiness" required>
+                            <option value="">Select category...</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label for="locationBusiness">Location</label>
+                        <input type="text" id="locationBusiness" list="locationList" placeholder="Where?">
+                        <datalist id="locationList"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label for="client">Client</label>
+                        <input type="text" id="client" list="clientList" placeholder="Client name">
+                        <datalist id="clientList"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label for="travelMiles">Travel Miles</label>
+                        <input type="number" id="travelMiles" step="0.1" placeholder="0.0">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" placeholder="Additional details, receipt info, etc..." rows="3"></textarea>
                 </div>
             </div>
 
@@ -746,17 +786,37 @@
             document.getElementById('btnPersonal').style.opacity = type === 'personal' ? '1' : '0.5';
             document.getElementById('btnBusiness').style.opacity = type === 'business' ? '1' : '0.5';
             
-            // Update category dropdown
-            const categorySelect = document.getElementById('category');
-            categorySelect.innerHTML = '<option value="">Select category...</option>';
+            // Show/hide fields based on type
+            const personalFields = document.getElementById('personalFields');
+            const businessFields = document.getElementById('businessFields');
             
-            const categories = type === 'personal' ? personalCategories : businessCategories;
-            categories.forEach(cat => {
-                const option = document.createElement('option');
-                option.value = cat;
-                option.textContent = cat;
-                categorySelect.appendChild(option);
-            });
+            if (type === 'personal') {
+                personalFields.style.display = 'block';
+                businessFields.style.display = 'none';
+                
+                // Populate personal category dropdown
+                const categorySelect = document.getElementById('category');
+                categorySelect.innerHTML = '<option value="">Select category...</option>';
+                personalCategories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat;
+                    option.textContent = cat;
+                    categorySelect.appendChild(option);
+                });
+            } else {
+                personalFields.style.display = 'none';
+                businessFields.style.display = 'block';
+                
+                // Populate business category dropdown
+                const categorySelectBusiness = document.getElementById('categoryBusiness');
+                categorySelectBusiness.innerHTML = '<option value="">Select category...</option>';
+                businessCategories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat;
+                    option.textContent = cat;
+                    categorySelectBusiness.appendChild(option);
+                });
+            }
         }
 
         // Load data from Firebase
@@ -821,8 +881,9 @@
 
         // Populate datalists for autocomplete
         function populateDataLists() {
-            const items = [...new Set(expensesData.map(e => e.item).filter(Boolean))];
-            const locations = [...new Set(expensesData.map(e => e.location).filter(Boolean))];
+            const items = [...new Set(expensesData.map(e => e.item).filter(Boolean))].sort();
+            const locations = [...new Set(expensesData.map(e => e.location).filter(Boolean))].sort();
+            const clients = [...new Set(expensesData.map(e => e.client).filter(Boolean))].sort();
             
             const itemList = document.getElementById('itemList');
             itemList.innerHTML = '';
@@ -839,6 +900,16 @@
                 option.value = location;
                 locationList.appendChild(option);
             });
+            
+            const clientList = document.getElementById('clientList');
+            if (clientList) {
+                clientList.innerHTML = '';
+                clients.forEach(client => {
+                    const option = document.createElement('option');
+                    option.value = client;
+                    clientList.appendChild(option);
+                });
+            }
         }
 
         // Save expense
@@ -852,12 +923,10 @@
 
                 const date = document.getElementById('date').value;
                 const cost = document.getElementById('cost').value;
-                const item = document.getElementById('item').value;
-                const category = document.getElementById('category').value;
                 const paymentMethod = document.getElementById('paymentMethod').value;
 
-                if (!date || !cost || !item || !category || !paymentMethod) {
-                    alert('Please fill in all required fields (marked with *)');
+                if (!date || !cost || !paymentMethod) {
+                    alert('Please fill in all required fields (Date, Cost, Payment Method)');
                     return;
                 }
 
@@ -865,14 +934,45 @@
                 
                 const expense = {
                     date: date,
-                    item: item,
                     cost: parseFloat(cost),
-                    location: document.getElementById('location').value || '',
-                    category: category,
                     paymentMethod: paymentMethod,
                     expenseType: expenseType,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 };
+
+                if (expenseType === 'personal') {
+                    const item = document.getElementById('item').value;
+                    const category = document.getElementById('category').value;
+                    
+                    if (!item || !category) {
+                        alert('Please fill in Item and Category for personal expenses');
+                        return;
+                    }
+                    
+                    expense.item = item;
+                    expense.location = document.getElementById('location').value || '';
+                    expense.category = category;
+                    // Set business fields to empty for personal expenses
+                    expense.client = '';
+                    expense.travelMiles = 0;
+                    expense.notes = '';
+                } else {
+                    // Business expense
+                    const categoryBusiness = document.getElementById('categoryBusiness').value;
+                    
+                    if (!categoryBusiness) {
+                        alert('Please select a Category for business expenses');
+                        return;
+                    }
+                    
+                    expense.category = categoryBusiness;
+                    expense.location = document.getElementById('locationBusiness').value || '';
+                    expense.client = document.getElementById('client').value || '';
+                    expense.travelMiles = parseFloat(document.getElementById('travelMiles').value) || 0;
+                    expense.notes = document.getElementById('notes').value || '';
+                    // Set personal fields to empty for business expenses
+                    expense.item = '';
+                }
 
                 const expenseId = document.getElementById('expenseId').value;
                 
@@ -900,14 +1000,28 @@
         function clearForm() {
             document.getElementById('date').value = new Date().toISOString().split('T')[0];
             document.getElementById('cost').value = '';
+            document.getElementById('paymentMethod').value = '';
+            
+            // Personal fields
             document.getElementById('item').value = '';
             document.getElementById('location').value = '';
             document.getElementById('category').value = '';
-            document.getElementById('paymentMethod').value = '';
+            
+            // Business fields
+            document.getElementById('categoryBusiness').value = '';
+            document.getElementById('locationBusiness').value = '';
+            document.getElementById('client').value = '';
+            document.getElementById('travelMiles').value = '';
+            document.getElementById('notes').value = '';
+            
             document.getElementById('expenseType').value = '';
             document.getElementById('expenseId').value = '';
             document.getElementById('btnPersonal').style.opacity = '1';
             document.getElementById('btnBusiness').style.opacity = '1';
+            
+            // Hide both field sections
+            document.getElementById('personalFields').style.display = 'none';
+            document.getElementById('businessFields').style.display = 'none';
         }
 
         // Edit expense
@@ -918,12 +1032,22 @@
             document.getElementById('expenseId').value = id;
             document.getElementById('date').value = expense.date;
             document.getElementById('cost').value = expense.cost;
-            document.getElementById('item').value = expense.item;
-            document.getElementById('location').value = expense.location || '';
             document.getElementById('paymentMethod').value = expense.paymentMethod;
             
             setExpenseType(expense.expenseType);
-            document.getElementById('category').value = expense.category;
+            
+            if (expense.expenseType === 'personal') {
+                document.getElementById('item').value = expense.item || '';
+                document.getElementById('location').value = expense.location || '';
+                document.getElementById('category').value = expense.category;
+            } else {
+                // Business expense
+                document.getElementById('categoryBusiness').value = expense.category;
+                document.getElementById('locationBusiness').value = expense.location || '';
+                document.getElementById('client').value = expense.client || '';
+                document.getElementById('travelMiles').value = expense.travelMiles || '';
+                document.getElementById('notes').value = expense.notes || '';
+            }
 
             showView('entry');
             window.scrollTo(0, 0);
@@ -1079,17 +1203,23 @@
         }
 
         function displayHistory(data) {
-            let html = '<table class="history-table"><thead><tr><th>Date</th><th>Type</th><th>Item</th><th>Category</th><th>Location</th><th>Cost</th><th>Payment</th><th>Actions</th></tr></thead><tbody>';
+            let html = '<table class="history-table"><thead><tr><th>Date</th><th>Type</th><th>Details</th><th>Category</th><th>Location</th><th>Client</th><th>Miles</th><th>Cost</th><th>Payment</th><th>Actions</th></tr></thead><tbody>';
             
             data.forEach(expense => {
                 const badge = `<span class="expense-badge ${expense.expenseType}">${expense.expenseType === 'personal' ? '👤' : '💼'}</span>`;
+                const details = expense.expenseType === 'personal' ? (expense.item || '-') : (expense.notes || '-');
+                const client = expense.client || '-';
+                const miles = expense.travelMiles ? expense.travelMiles.toFixed(1) : '-';
+                
                 html += `
                     <tr>
                         <td>${expense.date}</td>
                         <td>${badge}</td>
-                        <td>${expense.item}</td>
+                        <td>${details}</td>
                         <td>${expense.category}</td>
                         <td>${expense.location || '-'}</td>
+                        <td>${client}</td>
+                        <td>${miles}</td>
                         <td>$${expense.cost.toFixed(2)}</td>
                         <td>${expense.paymentMethod}</td>
                         <td>
@@ -1173,19 +1303,23 @@
         }
 
         // CSV Export
+        // CSV Export
         function exportCSV() {
-            let csv = 'ExpenseID,Date,Item,Cost,Location,Category,PaymentMethod,ExpenseType,Timestamp\n';
+            let csv = 'ExpenseID,Date,Item,Cost,Location,Category,PaymentMethod,ExpenseType,Client,TravelMiles,Notes,Timestamp\n';
             
             expensesData.forEach(expense => {
                 const row = [
                     expense.id,
                     expense.date,
-                    `"${expense.item}"`,
+                    `"${expense.item || ''}"`,
                     `$${expense.cost.toFixed(2)}`,
                     `"${expense.location || ''}"`,
                     expense.category,
                     expense.paymentMethod,
                     expense.expenseType,
+                    `"${expense.client || ''}"`,
+                    expense.travelMiles || 0,
+                    `"${(expense.notes || '').replace(/"/g, '""')}"`,
                     new Date().toISOString()
                 ];
                 csv += row.join(',') + '\n';
