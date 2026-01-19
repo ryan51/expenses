@@ -97,6 +97,7 @@
             --warning: #f59e0b;
             --personal: #8b5cf6;
             --business: #059669;
+            --health: #10b981;
             --bg: #ffffff;
             --surface: #f8fafc;
             --text: #0f172a;
@@ -375,6 +376,23 @@
             background: var(--surface);
         }
 
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
+        }
+
         .history-table button {
             padding: 0.25rem 0.75rem;
             font-size: 0.875rem;
@@ -541,11 +559,14 @@
             
             <!-- Expense Type Selector -->
             <div class="expense-type-selector">
-                <button class="personal" onclick="setExpenseType('personal')" id="btnPersonal">
-                    👤 Personal Expense
+                <button class="business" onclick="setExpenseType('business')" id="btnBusiness" style="background: #f59e0b; color: #000;">
+                    Business Expense
                 </button>
-                <button class="business" onclick="setExpenseType('business')" id="btnBusiness">
-                    💼 Business Expense
+                <button class="health" onclick="setExpenseType('health')" id="btnHealth" style="background: #3b82f6; color: #fff;">
+                    Health Expense
+                </button>
+                <button class="personal" onclick="setExpenseType('personal')" id="btnPersonal">
+                    Personal Expense
                 </button>
             </div>
 
@@ -632,6 +653,38 @@
                 </div>
             </div>
 
+            <!-- Health Expense Fields (hidden by default) -->
+            <div id="healthFields" class="form-section" style="display: none;">
+                <h3>Health Expense Details</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="categoryHealth">Category *</label>
+                        <select id="categoryHealth" required>
+                            <option value="">Select category...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="locationHealth">Location</label>
+                        <input type="text" id="locationHealth" list="locationList" placeholder="Where?">
+                        <datalist id="locationList"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label for="travelMilesHealth">Travel Miles</label>
+                        <input type="number" id="travelMilesHealth" step="0.1" placeholder="0.0">
+                    </div>
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="copay">
+                            <label for="copay">Copay</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="notesHealth">Notes</label>
+                    <textarea id="notesHealth" placeholder="Additional details, receipt info, etc..." rows="3"></textarea>
+                </div>
+            </div>
+
             <div class="action-buttons">
                 <button onclick="saveExpense()">💾 Save Expense</button>
                 <button onclick="clearForm()" class="secondary">🗑️ Clear Form</button>
@@ -658,8 +711,9 @@
                         <label for="filterExpenseType">Expense Type</label>
                         <select id="filterExpenseType" onchange="applySummaryFilters()">
                             <option value="all">All</option>
-                            <option value="personal">Personal Only</option>
                             <option value="business">Business Only</option>
+                            <option value="health">Health Only</option>
+                            <option value="personal">Personal Only</option>
                         </select>
                     </div>
                 </div>
@@ -758,6 +812,14 @@
             'Tools', 'Travel', 'Taxes'
         ];
 
+        const healthCategories = [
+            'Chiropractor', 'Dentist', 'Doctor', 'Optometrist', 'Rx', 'Therapy'
+        ];
+
+        const healthCategories = [
+            'Chiropractor', 'Dentist', 'Doctor', 'Optometrist', 'Rx', 'Therapy'
+        ];
+
         // Update sync status
         function updateSyncStatus(status, text) {
             const indicator = document.getElementById('syncIndicator');
@@ -785,14 +847,20 @@
             // Update button states
             document.getElementById('btnPersonal').style.opacity = type === 'personal' ? '1' : '0.5';
             document.getElementById('btnBusiness').style.opacity = type === 'business' ? '1' : '0.5';
+            document.getElementById('btnHealth').style.opacity = type === 'health' ? '1' : '0.5';
             
             // Show/hide fields based on type
             const personalFields = document.getElementById('personalFields');
             const businessFields = document.getElementById('businessFields');
+            const healthFields = document.getElementById('healthFields');
+            
+            // Hide all first
+            personalFields.style.display = 'none';
+            businessFields.style.display = 'none';
+            healthFields.style.display = 'none';
             
             if (type === 'personal') {
                 personalFields.style.display = 'block';
-                businessFields.style.display = 'none';
                 
                 // Populate personal category dropdown
                 const categorySelect = document.getElementById('category');
@@ -803,8 +871,7 @@
                     option.textContent = cat;
                     categorySelect.appendChild(option);
                 });
-            } else {
-                personalFields.style.display = 'none';
+            } else if (type === 'business') {
                 businessFields.style.display = 'block';
                 
                 // Populate business category dropdown
@@ -815,6 +882,18 @@
                     option.value = cat;
                     option.textContent = cat;
                     categorySelectBusiness.appendChild(option);
+                });
+            } else if (type === 'health') {
+                healthFields.style.display = 'block';
+                
+                // Populate health category dropdown
+                const categorySelectHealth = document.getElementById('categoryHealth');
+                categorySelectHealth.innerHTML = '<option value="">Select category...</option>';
+                healthCategories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat;
+                    option.textContent = cat;
+                    categorySelectHealth.appendChild(option);
                 });
             }
         }
@@ -952,11 +1031,12 @@
                     expense.item = item;
                     expense.location = document.getElementById('location').value || '';
                     expense.category = category;
-                    // Set business fields to empty for personal expenses
+                    // Set other type fields to empty/default
                     expense.client = '';
                     expense.travelMiles = 0;
                     expense.notes = '';
-                } else {
+                    expense.copay = false;
+                } else if (expenseType === 'business') {
                     // Business expense
                     const categoryBusiness = document.getElementById('categoryBusiness').value;
                     
@@ -970,8 +1050,26 @@
                     expense.client = document.getElementById('client').value || '';
                     expense.travelMiles = parseFloat(document.getElementById('travelMiles').value) || 0;
                     expense.notes = document.getElementById('notes').value || '';
-                    // Set personal fields to empty for business expenses
+                    // Set other type fields to empty/default
                     expense.item = '';
+                    expense.copay = false;
+                } else if (expenseType === 'health') {
+                    // Health expense
+                    const categoryHealth = document.getElementById('categoryHealth').value;
+                    
+                    if (!categoryHealth) {
+                        alert('Please select a Category for health expenses');
+                        return;
+                    }
+                    
+                    expense.category = categoryHealth;
+                    expense.location = document.getElementById('locationHealth').value || '';
+                    expense.travelMiles = parseFloat(document.getElementById('travelMilesHealth').value) || 0;
+                    expense.notes = document.getElementById('notesHealth').value || '';
+                    expense.copay = document.getElementById('copay').checked;
+                    // Set other type fields to empty/default
+                    expense.item = '';
+                    expense.client = '';
                 }
 
                 const expenseId = document.getElementById('expenseId').value;
@@ -1014,14 +1112,23 @@
             document.getElementById('travelMiles').value = '';
             document.getElementById('notes').value = '';
             
+            // Health fields
+            document.getElementById('categoryHealth').value = '';
+            document.getElementById('locationHealth').value = '';
+            document.getElementById('travelMilesHealth').value = '';
+            document.getElementById('notesHealth').value = '';
+            document.getElementById('copay').checked = false;
+            
             document.getElementById('expenseType').value = '';
             document.getElementById('expenseId').value = '';
             document.getElementById('btnPersonal').style.opacity = '1';
             document.getElementById('btnBusiness').style.opacity = '1';
+            document.getElementById('btnHealth').style.opacity = '1';
             
-            // Hide both field sections
+            // Hide all field sections
             document.getElementById('personalFields').style.display = 'none';
             document.getElementById('businessFields').style.display = 'none';
+            document.getElementById('healthFields').style.display = 'none';
         }
 
         // Edit expense
@@ -1040,13 +1147,18 @@
                 document.getElementById('item').value = expense.item || '';
                 document.getElementById('location').value = expense.location || '';
                 document.getElementById('category').value = expense.category;
-            } else {
-                // Business expense
+            } else if (expense.expenseType === 'business') {
                 document.getElementById('categoryBusiness').value = expense.category;
                 document.getElementById('locationBusiness').value = expense.location || '';
                 document.getElementById('client').value = expense.client || '';
                 document.getElementById('travelMiles').value = expense.travelMiles || '';
                 document.getElementById('notes').value = expense.notes || '';
+            } else if (expense.expenseType === 'health') {
+                document.getElementById('categoryHealth').value = expense.category;
+                document.getElementById('locationHealth').value = expense.location || '';
+                document.getElementById('travelMilesHealth').value = expense.travelMiles || '';
+                document.getElementById('notesHealth').value = expense.notes || '';
+                document.getElementById('copay').checked = expense.copay || false;
             }
 
             showView('entry');
@@ -1203,13 +1315,22 @@
         }
 
         function displayHistory(data) {
-            let html = '<table class="history-table"><thead><tr><th>Date</th><th>Type</th><th>Details</th><th>Category</th><th>Location</th><th>Client</th><th>Miles</th><th>Cost</th><th>Payment</th><th>Actions</th></tr></thead><tbody>';
+            let html = '<table class="history-table"><thead><tr><th>Date</th><th>Type</th><th>Details</th><th>Category</th><th>Location</th><th>Client</th><th>Miles</th><th>Copay</th><th>Cost</th><th>Payment</th><th>Actions</th></tr></thead><tbody>';
             
             data.forEach(expense => {
-                const badge = `<span class="expense-badge ${expense.expenseType}">${expense.expenseType === 'personal' ? '👤' : '💼'}</span>`;
+                let badge = '';
+                if (expense.expenseType === 'personal') {
+                    badge = `<span class="expense-badge personal">👤</span>`;
+                } else if (expense.expenseType === 'business') {
+                    badge = `<span class="expense-badge business">💼</span>`;
+                } else if (expense.expenseType === 'health') {
+                    badge = `<span class="expense-badge" style="background: #d1fae5; color: #10b981;">🏥</span>`;
+                }
+                
                 const details = expense.expenseType === 'personal' ? (expense.item || '-') : (expense.notes || '-');
                 const client = expense.client || '-';
                 const miles = expense.travelMiles ? expense.travelMiles.toFixed(1) : '-';
+                const copay = expense.copay ? '✓' : '-';
                 
                 html += `
                     <tr>
@@ -1220,6 +1341,7 @@
                         <td>${expense.location || '-'}</td>
                         <td>${client}</td>
                         <td>${miles}</td>
+                        <td>${copay}</td>
                         <td>$${expense.cost.toFixed(2)}</td>
                         <td>${expense.paymentMethod}</td>
                         <td>
@@ -1305,7 +1427,7 @@
         // CSV Export
         // CSV Export
         function exportCSV() {
-            let csv = 'ExpenseID,Date,Item,Cost,Location,Category,PaymentMethod,ExpenseType,Client,TravelMiles,Notes,Timestamp\n';
+            let csv = 'ExpenseID,Date,Item,Cost,Location,Category,PaymentMethod,ExpenseType,Client,TravelMiles,Notes,Copay,Timestamp\n';
             
             expensesData.forEach(expense => {
                 const row = [
@@ -1320,6 +1442,7 @@
                     `"${expense.client || ''}"`,
                     expense.travelMiles || 0,
                     `"${(expense.notes || '').replace(/"/g, '""')}"`,
+                    expense.copay ? 'TRUE' : 'FALSE',
                     new Date().toISOString()
                 ];
                 csv += row.join(',') + '\n';
