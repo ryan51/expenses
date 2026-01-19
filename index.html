@@ -295,6 +295,21 @@
             gap: 0.5rem;
         }
 
+        .expense-type-selector button.business {
+            background: #FFC700;
+            color: white;
+        }
+
+        .expense-type-selector button.health {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .expense-type-selector button.personal {
+            background: #8b5cf6;
+            color: white;
+        }
+
         .form-section {
             margin-bottom: 2rem;
         }
@@ -559,10 +574,10 @@
             
             <!-- Expense Type Selector -->
             <div class="expense-type-selector">
-                <button class="business" onclick="setExpenseType('business')" id="btnBusiness" style="background: #f59e0b; color: #000;">
+                <button class="business" onclick="setExpenseType('business')" id="btnBusiness">
                     Business Expense
                 </button>
-                <button class="health" onclick="setExpenseType('health')" id="btnHealth" style="background: #3b82f6; color: #fff;">
+                <button class="health" onclick="setExpenseType('health')" id="btnHealth">
                     Health Expense
                 </button>
                 <button class="personal" onclick="setExpenseType('personal')" id="btnPersonal">
