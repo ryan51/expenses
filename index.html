@@ -831,10 +831,6 @@
             'Chiropractor', 'Dentist', 'Doctor', 'Optometrist', 'Rx', 'Therapy'
         ];
 
-        const healthCategories = [
-            'Chiropractor', 'Dentist', 'Doctor', 'Optometrist', 'Rx', 'Therapy'
-        ];
-
         // Update sync status
         function updateSyncStatus(status, text) {
             const indicator = document.getElementById('syncIndicator');
@@ -857,6 +853,7 @@
 
         // Set expense type
         function setExpenseType(type) {
+            console.log('setExpenseType called with:', type);
             document.getElementById('expenseType').value = type;
             
             // Update button states
@@ -869,12 +866,15 @@
             const businessFields = document.getElementById('businessFields');
             const healthFields = document.getElementById('healthFields');
             
+            console.log('Found elements:', {personalFields, businessFields, healthFields});
+            
             // Hide all first
             personalFields.style.display = 'none';
             businessFields.style.display = 'none';
             healthFields.style.display = 'none';
             
             if (type === 'personal') {
+                console.log('Showing personal fields');
                 personalFields.style.display = 'block';
                 
                 // Populate personal category dropdown
@@ -887,6 +887,7 @@
                     categorySelect.appendChild(option);
                 });
             } else if (type === 'business') {
+                console.log('Showing business fields');
                 businessFields.style.display = 'block';
                 
                 // Populate business category dropdown
@@ -899,6 +900,7 @@
                     categorySelectBusiness.appendChild(option);
                 });
             } else if (type === 'health') {
+                console.log('Showing health fields');
                 healthFields.style.display = 'block';
                 
                 // Populate health category dropdown
