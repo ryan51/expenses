@@ -786,8 +786,9 @@
                         <label for="historyExpenseType">Expense Type</label>
                         <select id="historyExpenseType" onchange="applyHistoryFilters()">
                             <option value="">All Types</option>
-                            <option value="personal">Personal</option>
                             <option value="business">Business</option>
+                            <option value="health">Health</option>
+                            <option value="personal">Personal</option>
                         </select>
                     </div>
                 </div>
@@ -832,8 +833,8 @@
         ];
 
         const healthCategories = [
-            'Barber', 'Chiropractor', 'Dentist', 'Doctor', 'Gym', 'Grocery', 
-            'Massage', 'Optometrist', 'Other', 'Pet Supplies', 'Pharmacy', 'Physical Therapy', 
+            'Barber', 'Chiropractor', 'Dentist', 'Doctor', 'Grooming', 'Gym', 'Grocery', 
+            'Insurance', 'Massage', 'Optometrist', 'Other', 'Pet Supplies', 'Pharmacy', 'Physical Therapy', 
             'Rx', 'Sauna', 'Supplements', 'Therapy', 'Veterinarian'
         ];
 
@@ -1354,15 +1355,16 @@
                 
                 const details = expense.expenseType === 'personal' ? (expense.item || '-') : (expense.notes || '-');
                 
-                // Format date as "Monday 17, 2026"
+                // Format date as "January, Monday 17, 2026"
                 let formattedDate = expense.date;
                 if (expense.date) {
                     const dateObj = new Date(expense.date + 'T00:00:00'); // Add time to avoid timezone issues
                     if (!isNaN(dateObj.getTime())) {
-                        const options = { weekday: 'long', day: 'numeric', year: 'numeric', month: 'long' };
-                        const fullDate = dateObj.toLocaleDateString('en-US', options);
-                        // Convert "Monday, January 17, 2026" to "Monday 17, 2026"
-                        formattedDate = fullDate.replace(/,\s+\w+\s+/, ' ').replace(',', ',');
+                        const monthName = dateObj.toLocaleDateString('en-US', { month: 'long' });
+                        const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+                        const day = dateObj.getDate();
+                        const year = dateObj.getFullYear();
+                        formattedDate = `${monthName}, ${dayName} ${day}, ${year}`;
                     }
                 }
                 
