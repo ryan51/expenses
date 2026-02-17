@@ -1351,9 +1351,18 @@
                 const miles = expense.travelMiles ? expense.travelMiles.toFixed(1) : '-';
                 const copay = expense.copay ? '✓' : '-';
                 
+                // Format date consistently as YYYY-MM-DD
+                let formattedDate = expense.date;
+                if (expense.date) {
+                    const dateObj = new Date(expense.date);
+                    if (!isNaN(dateObj.getTime())) {
+                        formattedDate = dateObj.toISOString().split('T')[0];
+                    }
+                }
+                
                 html += `
                     <tr>
-                        <td>${expense.date}</td>
+                        <td>${formattedDate}</td>
                         <td>${badge}</td>
                         <td>${details}</td>
                         <td>${expense.category}</td>
