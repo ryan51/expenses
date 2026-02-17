@@ -635,6 +635,10 @@
                         </select>
                     </div>
                 </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="notesPersonal">Notes</label>
+                    <textarea id="notesPersonal" placeholder="Additional details, receipt info, etc..." rows="3"></textarea>
+                </div>
             </div>
 
             <!-- Business Expense Fields (hidden by default) -->
@@ -1050,10 +1054,10 @@
                     expense.item = item;
                     expense.location = document.getElementById('location').value || '';
                     expense.category = category;
+                    expense.notes = document.getElementById('notesPersonal').value || '';
                     // Set other type fields to empty/default
                     expense.client = '';
                     expense.travelMiles = 0;
-                    expense.notes = '';
                     expense.copay = false;
                 } else if (expenseType === 'business') {
                     // Business expense
@@ -1123,6 +1127,7 @@
             document.getElementById('item').value = '';
             document.getElementById('location').value = '';
             document.getElementById('category').value = '';
+            document.getElementById('notesPersonal').value = '';
             
             // Business fields
             document.getElementById('categoryBusiness').value = '';
@@ -1166,6 +1171,7 @@
                 document.getElementById('item').value = expense.item || '';
                 document.getElementById('location').value = expense.location || '';
                 document.getElementById('category').value = expense.category;
+                document.getElementById('notesPersonal').value = expense.notes || '';
             } else if (expense.expenseType === 'business') {
                 document.getElementById('categoryBusiness').value = expense.category;
                 document.getElementById('locationBusiness').value = expense.location || '';
@@ -1334,7 +1340,7 @@
         }
 
         function displayHistory(data) {
-            let html = '<table class="history-table"><thead><tr><th>Date</th><th>Type</th><th>Details</th><th>Category</th><th>Location</th><th>Client</th><th>Miles</th><th>Copay</th><th>Cost</th><th>Payment</th><th>Actions</th></tr></thead><tbody>';
+            let html = '<table class="history-table"><thead><tr><th>Date</th><th>Type</th><th>Details</th><th>Category</th><th>Location</th><th>Cost</th><th>Payment</th><th>Actions</th></tr></thead><tbody>';
             
             data.forEach(expense => {
                 let badge = '';
@@ -1347,16 +1353,16 @@
                 }
                 
                 const details = expense.expenseType === 'personal' ? (expense.item || '-') : (expense.notes || '-');
-                const client = expense.client || '-';
-                const miles = expense.travelMiles ? expense.travelMiles.toFixed(1) : '-';
-                const copay = expense.copay ? '✓' : '-';
                 
-                // Format date consistently as YYYY-MM-DD
+                // Format date as "Monday 17, 2026"
                 let formattedDate = expense.date;
                 if (expense.date) {
-                    const dateObj = new Date(expense.date);
+                    const dateObj = new Date(expense.date + 'T00:00:00'); // Add time to avoid timezone issues
                     if (!isNaN(dateObj.getTime())) {
-                        formattedDate = dateObj.toISOString().split('T')[0];
+                        const options = { weekday: 'long', day: 'numeric', year: 'numeric', month: 'long' };
+                        const fullDate = dateObj.toLocaleDateString('en-US', options);
+                        // Convert "Monday, January 17, 2026" to "Monday 17, 2026"
+                        formattedDate = fullDate.replace(/,\s+\w+\s+/, ' ').replace(',', ',');
                     }
                 }
                 
@@ -1367,9 +1373,6 @@
                         <td>${details}</td>
                         <td>${expense.category}</td>
                         <td>${expense.location || '-'}</td>
-                        <td>${client}</td>
-                        <td>${miles}</td>
-                        <td>${copay}</td>
                         <td>$${expense.cost.toFixed(2)}</td>
                         <td>${expense.paymentMethod}</td>
                         <td>
