@@ -476,7 +476,7 @@
         }
 
         .summary-card.business {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            background: linear-gradient(135deg, #FFC700 0%, #e6b400 100%);
         }
 
         .summary-card.total {
@@ -733,6 +733,17 @@
                             <option value="business">Business Only</option>
                             <option value="health">Health Only</option>
                             <option value="personal">Personal Only</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="filterPaymentMethod">Payment Method</label>
+                        <select id="filterPaymentMethod" onchange="applySummaryFilters()">
+                            <option value="">All Payment Methods</option>
+                            <option value="DFCU debit card">DFCU debit card</option>
+                            <option value="AA cc">AA cc</option>
+                            <option value="BARCLAYS cc">BARCLAYS cc</option>
+                            <option value="Cash">Cash</option>
+                            <option value="WF business debit">WF business debit</option>
                         </select>
                     </div>
                 </div>
@@ -1232,6 +1243,7 @@
             const startDate = document.getElementById('filterStartDate').value;
             const endDate = document.getElementById('filterEndDate').value;
             const expenseType = document.getElementById('filterExpenseType').value;
+            const paymentMethod = document.getElementById('filterPaymentMethod').value;
 
             let filtered = expensesData;
 
@@ -1244,6 +1256,9 @@
             if (expenseType !== 'all') {
                 filtered = filtered.filter(e => e.expenseType === expenseType);
             }
+            if (paymentMethod) {
+                filtered = filtered.filter(e => e.paymentMethod === paymentMethod);
+            }
 
             displaySummary(filtered);
         }
@@ -1252,6 +1267,7 @@
             document.getElementById('filterStartDate').value = '';
             document.getElementById('filterEndDate').value = '';
             document.getElementById('filterExpenseType').value = 'all';
+            document.getElementById('filterPaymentMethod').value = '';
             applySummaryFilters();
         }
 
@@ -1272,7 +1288,7 @@
                 </div>`;
             if (healthTotal > 0) {
                 cardsHtml += `
-                <div class="summary-card" style="background: linear-gradient(135deg, #10b981, #059669);">
+                <div class="summary-card" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
                     <h3>Health Expenses</h3>
                     <div class="amount">$${healthTotal.toFixed(2)}</div>
                 </div>`;
@@ -1285,13 +1301,11 @@
             `;
             document.getElementById('summaryCards').innerHTML = cardsHtml;
 
-            // Category breakdown — normalize "Grocery" → "Groceries"
-            const categoryTotals = {};
-            data.forEach(e => {
-                const cat = (e.category === 'Grocery') ? 'Groceries' : e.category;
-                if (!categoryTotals[cat]) categoryTotals[cat] = 0;
-                categoryTotals[cat] += e.cost;
-            });
+            // Normalize "Grocery" → "Groceries"
+            const normalizedData = data.map(e => ({
+                ...e,
+                category: e.category === 'Grocery' ? 'Groceries' : e.category
+            }));
 
             // Define groups
             const groups = [
@@ -1305,20 +1319,18 @@
                 }
             ];
 
-            // Collect all categories that belong to a group
             const groupedCats = new Set(groups.flatMap(g => g.categories));
+            const otherCats = [...new Set(normalizedData.map(e => e.category).filter(c => !groupedCats.has(c)))].sort();
 
-            // Build "Other" group from remaining categories
-            const otherCats = Object.keys(categoryTotals).filter(c => !groupedCats.has(c)).sort();
+            function renderGroupSection(label, cats) {
+                const expenses = normalizedData.filter(e => cats.includes(e.category));
+                if (expenses.length === 0) return '';
 
-            let breakdownHtml = '';
-
-            function renderGroupTable(label, cats) {
-                const rows = cats.filter(c => categoryTotals[c] > 0);
-                if (rows.length === 0) return '';
-
-                const groupTotal = rows.reduce((sum, c) => sum + categoryTotals[c], 0);
+                const groupTotal = expenses.reduce((sum, e) => sum + e.cost, 0);
                 const groupPct = total > 0 ? ((groupTotal / total) * 100).toFixed(1) : '0.0';
+
+                // Sort by date desc, then by category
+                expenses.sort((a, b) => b.date.localeCompare(a.date));
 
                 let html = `
                     <div style="margin-bottom: 1.5rem;">
@@ -1327,23 +1339,29 @@
                             <span style="font-weight:700;">$${groupTotal.toFixed(2)} <span style="color:var(--secondary); font-weight:400; font-size:0.85rem;">(${groupPct}%)</span></span>
                         </div>
                         <table class="history-table" style="margin-top:0;">
-                            <thead><tr><th>Category</th><th>Amount</th><th>% of Total</th></tr></thead>
+                            <thead><tr><th>Date</th><th>Category</th><th>Item/Notes</th><th>Payment</th><th style="text-align:right;">Amount</th></tr></thead>
                             <tbody>`;
-                rows.forEach(c => {
-                    const pct = total > 0 ? ((categoryTotals[c] / total) * 100).toFixed(1) : '0.0';
-                    html += `<tr><td style="padding-left:1.5rem;">${c}</td><td>$${categoryTotals[c].toFixed(2)}</td><td>${pct}%</td></tr>`;
+
+                expenses.forEach(e => {
+                    const dateObj = new Date(e.date + 'T00:00:00');
+                    const dateStr = !isNaN(dateObj) ? dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : e.date;
+                    const detail = e.item || e.notes || '—';
+                    html += `<tr>
+                        <td style="padding-left:1.5rem; white-space:nowrap; color:var(--secondary); font-size:0.875rem;">${dateStr}</td>
+                        <td>${e.category}</td>
+                        <td style="color:var(--secondary); font-size:0.875rem;">${detail}</td>
+                        <td style="font-size:0.8rem; color:var(--secondary);">${e.paymentMethod || '—'}</td>
+                        <td style="text-align:right; font-weight:600;">$${e.cost.toFixed(2)}</td>
+                    </tr>`;
                 });
+
                 html += `</tbody></table></div>`;
                 return html;
             }
 
-            groups.forEach(g => {
-                breakdownHtml += renderGroupTable(g.label, g.categories);
-            });
-
-            if (otherCats.length > 0) {
-                breakdownHtml += renderGroupTable('📦 Other', otherCats);
-            }
+            let breakdownHtml = '';
+            groups.forEach(g => { breakdownHtml += renderGroupSection(g.label, g.categories); });
+            if (otherCats.length > 0) { breakdownHtml += renderGroupSection('📦 Other', otherCats); }
 
             document.getElementById('categoryBreakdown').innerHTML = breakdownHtml;
         }
